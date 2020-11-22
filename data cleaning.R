@@ -8,12 +8,13 @@ library(kableExtra)
 library(gridExtra)
 library(tidytext)
 library(lubridate)
+library(car) 
 data("stop_words")
 
 # import data
 ted_talks_en <- read_csv("ted dataset/ted_talks_en.csv")
 ted_talks_en <- na.omit(ted_talks_en)
-talks <- ted_talks_en[,c(1,3,4,5,7,8,9,10,11,12,13,14)]
+talks <- ted_talks_en[,c(1,2,3,4,5,7,8,9,10,11,12,13,14,17)]
 
 # clean data
 
@@ -36,6 +37,25 @@ talks %<>% separate(occ2, c("de3","second occupation","de4"), sep = "'")
 talks %<>% select(-c("de1","de2","de3","de4"))
 
 
+ted_talks<- read_csv("ted_metadata_kaggle.csv")
+ted_youtube <- read_csv("ted_metadata_youtube.csv")
+colnames(ted_talks)[19] <- "id"
+
+df <- left_join(ted_talks,ted_youtube,"id")
+df <- na.omit(df)
+df <- df[,c(2,4,5,7,8,10,14,16:18,22,26,28,30:32)]
+colnames(df)[2] <- "duration_ted"
+colnames(df)[8] <- "title"
+colnames(df)[10] <- "view_ted"
+colnames(df)[11] <- "view_yt"
+colnames(df)[13] <- "duration_yt"
+
+df2 <- left_join(talks,df,"title")
+df2 %<>% filter(is.na(average_rating)==F)
+df2 <- df2[,c(1:3,5:6,8:11,15:19,21,23,26:32)]
+colnames(df2)[13] <- "comments"
+colnames(df2)[8] <- "event"
+write.csv(df2,"talks.csv",row.names = F)
 # EDA
 
 ## number of speakers
@@ -152,6 +172,9 @@ talks %<>% mutate(log_views = log(views))
 talks %<>% mutate(log_comments = log(comments))
 talks %<>% filter(log_comments>=0)
 talks %<>% mutate(english = ifelse(native_lang=="en",1,0))
+talks %<>% mutate(s_duration = (duration-mean(duration))/sd(duration))
+talks %<>% mutate(s_views = (views-mean(views))/sd(views))
+talks %<>% mutate(s_numlang = (num_lang-mean(num_lang)/sd(num_lang)))
 
 ##model
 fit1 <- lm(comments~duration_min+log_views+num_lang,talks)
@@ -167,3 +190,11 @@ plot(fit1)
 fit2 <- lm(log_comments~duration_min+log_views+num_lang,talks)
 par(mfrow = c(2,2))
 plot(fit2)
+
+fit3 <- lm(log_comments~s_duration+s_views+s_numlang,talks)
+summary(fit3)
+par(mfrow = c(2,2))
+plot(fit3)
+
+outlierTest(fit3)
+influence.measures(fit3)
