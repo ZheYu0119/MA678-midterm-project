@@ -3,10 +3,11 @@ library(tidyverse)
 library(stringr)
 library(rstanarm)
 library(knitr)
-library(tidyverse)
 library(magrittr)
 library(kableExtra)
 library(gridExtra)
+library(tidytext)
+data("stop_words")
 
 # import data
 ted_talks_en <- read_csv("ted dataset/ted_talks_en.csv")
@@ -74,3 +75,10 @@ ggplot(data = talks)+
 ggplot(data = talks)+
   aes(num_lang,comments)+
   geom_point(aes(color=duration))
+
+#text mining
+topics <- data.frame(talks_id = ted_talks_en$talk_id, text = ted_talks_en$topics)
+topics %<>% unnest_tokens(word, text) %>% anti_join(stop_words)%>%count(word,sort = T)
+ggplot(topics[1:10,],aes(word,n))+
+  geom_col()+
+  coord_flip()
