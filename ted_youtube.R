@@ -71,6 +71,14 @@ talks %>%
   geom_col(fill="tan4") +
   labs(y = NULL)
 
+##category
+talks %>%
+  count(categories, sort = TRUE) %>%
+  mutate(event = reorder(categories, n)) %>%
+  ggplot(aes(n, categories)) +
+  geom_col(fill="tan4") +
+  labs(y = NULL)
+
 ## year
 talks$recorded_date <- ymd(talks$recorded_date)
 talks$published_date <- ymd(talks$published_date)
@@ -108,6 +116,37 @@ ggplot(data = talks)+
   labs(title = "comments vs duration")+
   geom_smooth()
 
+ggplot(data = talks)+
+  aes(dislike_count,average_rating)+
+  geom_point(alpha = 0.3,color = "brown4")+
+  labs(title = "average rating vs number of dislike")+
+  xlim(0,2500)+
+  geom_smooth()
+
+ggplot(data = talks)+
+  aes(log(like_count),average_rating)+
+  geom_point(alpha = 0.3,color = "brown4")+
+  labs(title = "average rating vs number of like")+
+  geom_smooth()
+
+ggplot(data = talks)+
+  aes(duration_yt,average_rating)+
+  geom_point(alpha = 0.3,color = "brown4")+
+  labs(title = "average rating vs duration")+
+  geom_smooth()
+
+ggplot(data = talks)+
+  aes(log(view_yt),average_rating)+
+  geom_point(alpha = 0.3,color = "brown4")+
+  labs(title = "average rating vs number of views")+
+  geom_smooth()
+
+ggplot(data = talks)+
+  aes(log(view_yt),average_rating)+
+  geom_point(alpha = 0.3,color = "brown4")+
+  labs(title = "average rating vs number of views")+
+  geom_smooth()
+
 #text mining
 topics <- data.frame(talks_id = ted_talks_en$talk_id, text = ted_talks_en$topics)
 topics %<>% unnest_tokens(word, text) %>% anti_join(stop_words)
@@ -133,7 +172,7 @@ talks %<>% mutate(s_duration = (duration_ted-mean(duration_ted))/sd(duration_ted
 talks %<>% mutate(s_views = (view_ted-mean(view_ted))/sd(view_ted))
 talks %<>% mutate(s_numlang = (num_lang-mean(num_lang)/sd(num_lang)))
 
-##model
+##model for ted
 fit1 <- lm(comments~duration_min+log_views+num_lang,talks)
 summary(fit1)
 
@@ -144,13 +183,54 @@ ggplot()+
 par(mfrow = c(2,2))
 plot(fit1)
 
-fit2 <- lm(log_comments~duration_min+log_views+num_lang,talks)
+fit2 <- lm(log_comments~duration_min+log_views+s_numlang,talks)
 par(mfrow = c(2,2))
 plot(fit2)
 
-fit3 <- lm(log_comments~s_duration+s_views+s_numlang,talks)
+fit3 <- lm(log_comments~log(duration_ted)+log(view_ted)+log(num_lang),talks[-931,])
 summary(fit3)
 par(mfrow = c(2,2))
 plot(fit3)
 
 outlierTest(fit3)
+gvlma(fit3)
+## model for youtube
+
+
+y1 <- lm(average_rating~dislike_count+like_count+log(view_yt)+duration_yt+num_lang,talks)
+summary(y1)
+plot(y1)
+
+
+talks %<>% mutate(sd_duration = (duration_yt-mean(duration_yt))/sd(duration_yt))
+talks %<>% mutate(sd_views = (view_yt-mean(view_yt))/sd(view_yt))
+talks %<>% mutate(sd_rating = (average_rating-mean(average_rating))/sd(average_rating))
+talks %<>% mutate(sd_dislike = (dislike_count-mean(dislike_count))/sd(dislike_count))
+talks %<>% mutate(sd_like = (like_count-mean(like_count))/sd(like_count))
+yt <- filter(talks,average_rating>4.7)
+
+y2<- lm(average_rating~dislike_count+log(like_count)+log(view_yt)+sd_duration+s_numlang,yt[-c(1175,715),])
+summary(y2)
+par(mfrow = c(2,2))
+plot(y2)
+
+y3<- lm(average_rating~log(dislike_count)+sd_like+log(view_yt)+sd_duration+s_numlang,yt[-946,])
+
+
+
+plot(y3)
+
+summary(yt$average_rating)
+
+ggplot()+
+  geom_point(aes(y3$fitted.values,y3$residuals))+
+  geom_smooth(aes(y3$fitted.values,y3$residuals))
+
+durbinWatsonTest(y3)
+crPlots(y1,average_rating~dislike_count+like_count+view_yt+duration_yt+num_lang)
+crPlots(y2)
+crPlots(y3)
+spreadLevelPlot(y2)
+spreadLevelPlot(y3)
+qqPlot(y3,labels=row.names(talks),id.method="identify",simulate=TRUE,main="Q-Q Plot")
+qqPlot(fit3,labels=row.names(states),id.method="identify",simulate=TRUE,main="Q-Q Plot")
