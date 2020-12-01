@@ -1,0 +1,104 @@
+---
+title: "Report of MA678 Midterm Project"
+author: "Yu Zhe"
+date: "2020/12/1"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	message = FALSE,
+	warning = FALSE,
+	include = FALSE
+)
+library(readr)
+library(tidyverse)
+library(stringr)
+library(rstanarm)
+library(knitr)
+library(magrittr)
+library(kableExtra)
+library(gridExtra)
+library(tidytext)
+library(lubridate)
+library(car) 
+library(gvlma)
+data("stop_words")
+talks <- read.csv("talks.csv",header = T)
+```
+
+## Abstract
+
+TED is an American online platform providing different topics of talks videos with slogan 'Ideas worth spreading'. But some videos have millions of hits while some only have a few views. Here rises a problem: Why do some talks are so popular on TED? To address this problem, I use some factors related with talks and build multilevel models to see it in detail. This report are consisted 5 main parts: Introduction, Data preparing, Modeling, Result and Discussion. 
+
+## Introduction
+
+Since TED is famous all over the word, speakers with different native language will give speech on TED and some popular talks are translated into different languages. So each talk has its own features and some similarities with other talks as well, such as duration, number of views, the native language of this talks. And some features may lead the talks to be more out-standing. For example, talks in English may draw more attention for it is an American website, majority of viewers have English as their native languages. Besides, Viewers would give comments on the talks they are interested in. Talks with more comments always indicate that they are worth discussing or referencing. 
+Therefore I conduct several models to see which factors may influence the number of comments of talks. Before that, I clean the data and combine some information collected from YouTube for same talk video.
+
+## Data Preparing
+
+### Data Source
+
+The main data set is published on [Kaggle:TED-Ultimate Dataset](https://www.kaggle.com/miguelcorraljr/ted-ultimate-dataset). And I also find a data set on [Kaggle:TEDTalks-transcript](https://www.kaggle.com/goweiting/ted-talks-transcript) have some additional transcript of these videos.
+
+### Data cleaning and processing
+
+Firstly, I count the number of available languages. Then merge the two data set into one and select the columns that I need
+
+### Exploratory Data Analysis
+
+## Modeling
+
+### Model fitting
+
+### Model Validation
+
+## Result
+
+## Discussion
+
+## Citation
+
+## Appendix
+
+## Supplement
+
+```{r}
+talks %<>% mutate(english = ifelse(native_lang=="en",1,0))
+ggplot(data = talks)+
+  aes(log(view_ted),log(comments))+
+  geom_point(aes(color = factor(english)),alpha = 0.3)+
+  labs(title = "views vs comments")+
+  geom_smooth(aes(color = factor(english)),method = "lm",se=F)
+ggplot(data = talks)+
+  aes(log(view_ted),log(comments))+
+  geom_point(aes(color = factor(categories)),alpha = 0.3)+
+  labs(title = "views vs comments")+
+  geom_smooth(aes(color = factor(categories)),method = "lm",se=F)
+
+ggplot(data = talks)+
+  aes(log(duration_ted),log(comments))+
+  geom_point(alpha = 0.3,aes(color = factor(english)))+
+  scale_fill_brewer(direction = -1)+
+  labs(title = "comments vs duration")+
+  geom_smooth(aes(color = factor(english)))
+ggplot(data = talks)+
+  aes(log(duration_ted),log(comments))+
+  geom_point(alpha = 0.3,aes(color = factor(categories)))+
+  scale_fill_brewer(direction = -1)+
+  labs(title = "comments vs duration")+
+  geom_smooth(aes(color = factor(categories)),se=F,method = "lm")
+
+ggplot(data = talks[-931,])+
+  aes(log(num_lang),log(comments))+
+  geom_point(alpha = 0.3,aes(color = factor(english)))+
+  labs(title = "comments vs number of available languages")+
+  geom_smooth(aes(color = factor(english)),method="lm",se=F)
+ggplot(data = talks[-931,])+
+  aes(log(num_lang),log(comments))+
+  geom_point(alpha = 0.3,aes(color = factor(categories)))+
+  labs(title = "comments vs number of available languages")+
+  geom_smooth(aes(color = factor(categories)),se=F,method = "lm")
+```
+

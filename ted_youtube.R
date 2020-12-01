@@ -94,6 +94,8 @@ ggplot(talks,aes(published_month))+
 ggplot(talks,aes(published_date,comments))+geom_line()
 
 ## scatter plot
+talks %<>% mutate(english = ifelse(native_lang=="en",1,0))
+
 ggplot(data = talks)+
   aes(log(view_ted),log(comments))+
   geom_point(aes(color = factor(english)),alpha = 0.3)+
@@ -232,7 +234,7 @@ outlierTest(fit3)
 library("lme4")
 library(arm)
 
-fit4 <- lmer(log_comments~log_duration+log_views+log(num_lang)+(1+log_duration|categories)+english:log(num_lang)+english,talks[-931,])
+fit4 <- lmer(log_comments~log_duration+log_views+log(num_lang)+(1|categories)+english:log(num_lang)+english+english:log(view_ted),talks[-931,])
 summary(fit4)
 plot(fit4,which=2)
 qqPlot(fit4)
@@ -243,7 +245,7 @@ coef(fit4)
 
 binnedplot(fitted(fit4),resid(fit4))
 ggplot()+
-  geom_point(aes(fitted(fit4),fit))+
+  geom_point(aes(fitted(fit4),resid(fit4)))+
   geom_smooth(aes(fitted(fit4),resid(fit4)))
 
 ggplot()+geom_density(aes(resid(fit4)),size=2.5)
