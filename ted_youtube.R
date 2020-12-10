@@ -187,7 +187,7 @@ topics %>%
   geom_col(fill="tan3") +
   labs(y = NULL)
 
-##data process
+##data processing
 talks %<>% mutate(duration_min = duration_ted/60)
 talks %<>% mutate(log_views = log(view_ted))
 talks %<>% mutate(log_comments = log(comments))
@@ -234,16 +234,12 @@ outlierTest(fit3)
 library("lme4")
 library(arm)
 
+####final model####
 fit4 <- lmer(log_comments~log_duration+log_views+log(num_lang)+(1|categories),talks[-931,])
 summary(fit4)
 plot(fit4,which=2)
-qqPlot(fit8)
-
-fit8 <- lmer(log_comments~log_duration+log_views+log(num_lang)+(1|categories),talks[-931,])
 qqmath(fit4)
 confint(fit4)
-
-plot(confint(fit4))
 ranef(fit4)
 coef(fit4)
 
@@ -253,7 +249,7 @@ ggplot()+
   geom_smooth(aes(fitted(fit4),resid(fit4)))
 
 ggplot()+geom_density(aes(resid(fit4)),size=2.5)
-
+###################
 
 fit5 <- lmer(log_comments~s_duration+s_views+s_numlang+(1|categories),talks[-931,])
 display(fit5)
@@ -273,109 +269,3 @@ ggplot() +
   theme_bw() + 
   theme(legend.position="none")
 
-## model for youtube
-
-
-y1 <- lm(average_rating~log(dislike_count)+log(like_count)+log(view_yt)+duration_yt+num_lang,talks[-c(1753,1875),])
-summary(y1)
-plot(y1)
-
-crPlots(y1)
-spreadLevelPlot(y1)
-qqPlot(y1)
-
-#process
-talks %<>% mutate(sd_duration = (duration_yt-mean(duration_yt))/sd(duration_yt))
-talks %<>% mutate(sd_views = (view_yt-mean(view_yt))/sd(view_yt))
-talks %<>% mutate(sd_rating = (average_rating-mean(average_rating))/sd(average_rating))
-talks %<>% mutate(sd_dislike = (dislike_count-mean(dislike_count))/sd(dislike_count))
-talks %<>% mutate(sd_like = (like_count-mean(like_count))/sd(like_count))
-talks$rating2 <- (talks$average_rating)^2
-yt <- filter(talks,average_rating>4.5&like_count<5000)
-yt %<>% mutate(sd_duration = (duration_yt-mean(duration_yt))/sd(duration_yt))
-yt %<>% mutate(sd_views = (view_yt-mean(view_yt))/sd(view_yt))
-yt %<>% mutate(sd_rating = (average_rating-mean(average_rating))/sd(average_rating))
-yt %<>% mutate(sd_dislike = (dislike_count-mean(dislike_count))/sd(dislike_count))
-yt %<>% mutate(sd_like = (like_count-mean(like_count))/sd(like_count))
-yt$rating2 <- (talks$average_rating)^2
-
-ysd <- lm(average_rating~sd_dislike+sd_like+sd_views,yt[-c(1175,715),])
-summary(ysd)
-par(mfrow = c(2,2))
-crPlots(ysd)
-plot(ysd)
-
-y2 <- lm(average_rating~log(dislike_count)+log(like_count)+log(view_yt)+sd_duration+s_numlang,yt[-c(1175,715),])##
-summary(y2)
-plot(y2)
-
-y3 <- lm(average_rating~log(dislike_count)+like_count+log(view_yt)+sd_duration+num_lang+dislike_count:like_count+I(like_count^2)+I(dislike_count^2),yt)##best
-summary(y3)
-plot(y3)
-
-y4 <- lm(average_rating~dislike_count+log(like_count)+sqrt(view_yt)+sd_duration+s_numlang+dislike_count:like_count,yt)
-summary(y4)
-plot(y4)
-
-crPlots(y4)
-gvlma(y4)
-
-ytest <- lm(average_rating~log(dislike_count)+log(like_count),yt)
-crPlots(ytest)
-summary(ytest)
-ggplot()+
-  geom_point(aes(ytest$fitted.values,ytest$residuals))+
-  geom_smooth(aes(ytest$fitted.values,ytest$residuals))
-plot(ytest)
-qqPlot(ytest)
-
-durbinWatsonTest(y3)
-
-crPlots(y2)
-
-
-crPlots(y5)
-spreadLevelPlot(y2)
-spreadLevelPlot(y4)
-qqPlot(y3,labels=row.names(talks),id.method="identify",simulate=TRUE,main="Q-Q Plot")
-qqPlot(fit3,labels=row.names(states),id.method="identify",simulate=TRUE,main="Q-Q Plot")
-vif(y4)
-step(y4)
-boxTidwell(fit3)
-ncvTest(y3)
-durbinWatsonTest(y3)
-outlierTest(y3)
-# outlier
-plot(x=fitted(y3),y=rstudent(y3))
-abline(h=3,col="red",lty=2)
-abline(h=-3,col="red",lty=2)
-#leverage
-hat.plot <- function(fit){
-  p <- length(coefficients(fit))
-  n <- length(fitted(fit))
-  plot(hatvalues(fit),main = "Index Plot of Hat Values")
-  abline(h=c(2,3)*p/n,col="red",lty=2)
-  identify(1:n, hatvalues(fit), names(hatvalues(fit)))  
-}
-hat.plot(y3)
-
-test <- talks[,c(12,18,20,21:23)]
-test$log_dislike <- log(test$dislike_count)
-test$log_like <- log(test$like_count)
-test$log_rating <- log(test$average_rating)
-scatterplotMatrix(talks[,c(12,18,20:23)], spread = F, smoother=loessLine, main = "Scatter Plot Matrix",groups = "categories")
-corrplot(cor(test[,6:9]),order="AOE",addCoef.col = 'grey')#?Ÿ???
-pairs(~like_count+dislike_count+view_yt+duration_yt+average_rating+num_lang,data=talks,lower.panel=panel.smooth,
-          upper.panel=panel.cor)
-
-panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
-{
-  usr <- par("usr")
-  on.exit(par(usr))
-  par(usr = c(0, 1, 0, 1))
-  r <- abs(cor(x, y))
-  txt <- format(c(r, 0.123456789), digits = digits)[1]
-  txt <- paste0(prefix, txt)
-  if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
-  text(0.5, 0.5, txt, cex = cex.cor * r)
-}
