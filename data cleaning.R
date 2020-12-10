@@ -34,7 +34,7 @@ talks$num_lang <- talks$num_lang+1
 talks %<>% separate(occupations, c("occ1","occ2"), sep = ",") 
 talks %<>% separate(occ1, c("de1","first occupation","de2"), sep = "'")
 talks %<>% separate(occ2, c("de3","second occupation","de4"), sep = "'")
-talks %<>% select(-c("de1","de2","de3","de4"))
+talks <- talks[,-c(5,7,8,10)]
 
 
 ted_talks<- read_csv("ted_metadata_kaggle.csv")
@@ -55,6 +55,8 @@ df2 %<>% filter(is.na(average_rating)==F)
 df2 <- df2[,c(1:3,5:6,8:11,15:19,21,23,26:32)]
 colnames(df2)[13] <- "comments"
 colnames(df2)[8] <- "event"
+df2 %<>% separate(categories, c("de1","categories","de2"), sep = "'")
+df2 <-  df2[,-c(19,21)]
 write.csv(df2,"talks.csv",row.names = F)
 # EDA
 

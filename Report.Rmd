@@ -1,15 +1,16 @@
 ---
 title: "Report of MA678 Midterm Project"
-author: "Yu Zhe"
+author: "Zhe Yu"
 date: "2020/12/1"
-output: pdf_document
+output:
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
+	echo = TRUE,
 	message = FALSE,
-	warning = FALSE,
-	include = FALSE
+	warning = FALSE
 )
 library(readr)
 library(tidyverse)
@@ -23,82 +24,237 @@ library(tidytext)
 library(lubridate)
 library(car) 
 library(gvlma)
+library(lme4)
+library(arm)
+library(gridExtra)
+library(kableExtra)
+library(lmerTest)
+library(lattice)
 data("stop_words")
 talks <- read.csv("talks.csv",header = T)
 ```
 
 ## Abstract
 
-TED is an American online platform providing different topics of talks videos with slogan 'Ideas worth spreading'. But some videos have millions of hits while some only have a few views. Here rises a problem: Why do some talks are so popular on TED? To address this problem, I use some factors related with talks and build multilevel models to see it in detail. This report are consisted 5 main parts: Introduction, Data preparing, Modeling, Result and Discussion. 
+TED is an American online platform providing different topics of talks videos with slogan 'Ideas worth spreading'. But some videos have millions of hits while some only have a few views. Here rises a problem: Why do some talks are so popular on TED? To address this problem, I use some factors related with talks and build multilevel model. The model shows that the variables all have positive impact on number of comments and is slightly different between categories. This report are consisted 5 main parts: Introduction, Method, Result and Discussion. 
 
 ## Introduction
 
-Since TED is famous all over the word, speakers with different native language will give speech on TED and some popular talks are translated into different languages. So each talk has its own features and some similarities with other talks as well, such as duration, number of views, the native language of this talks. And some features may lead the talks to be more out-standing. For example, talks in English may draw more attention for it is an American website, majority of viewers have English as their native languages. Besides, Viewers would give comments on the talks they are interested in. Talks with more comments always indicate that they are worth discussing or referencing. 
-Therefore I conduct several models to see which factors may influence the number of comments of talks. Before that, I clean the data and combine some information collected from YouTube for same talk video.
+Since TED is famous all over the word, speakers with different native language will give speech on TED and some popular talks are translated into different languages. So each talk has its own features and some similarities with other talks as well, such as duration, number of views, the native language of this talks. And some features may lead the talks to be more out-standing. For example, talks in English may draw more attention for it is an American website, majority of viewers have English as their native languages. Besides, Viewers would give comments on the talks they are interested in. Talks with more comments always indicate that they are worth discussing or recommending. 
 
-## Data Preparing
+Therefore I use multilevel models to see what and how factors may influence the number of comments of talks. Before that, I clean the data and combine some information collected from YouTube for same talk video.
 
-### Data Source
+## Method
 
-The main data set is published on [Kaggle:TED-Ultimate Dataset](https://www.kaggle.com/miguelcorraljr/ted-ultimate-dataset). And I also find a data set on [Kaggle:TEDTalks-transcript](https://www.kaggle.com/goweiting/ted-talks-transcript) have some additional transcript of these videos.
+### Data Cleaning and Processing
 
-### Data cleaning and processing
+The main data set is published on [Kaggle: TED-Ultimate Dataset](https://www.kaggle.com/miguelcorraljr/ted-ultimate-dataset). And I also found a data set on [Kaggle: TEDTalks-transcript](https://www.kaggle.com/goweiting/ted-talks-transcript) have some additional transcript of these videos. 
 
-Firstly, I count the number of available languages. Then merge the two data set into one and select the columns that I need
+Firstly, for some columns are 'dictionary' type so I need to clean them up, removing symbols that are useless. Secondly, I count the number of available languages, mutate it as a new column; Thirdly, I merged two data set into one and select the columns that I need; Finally, I transfered dates into POSIXct type by using Lubridate package.
+Here are some explanations of columns:
+
+| column names | explanation |
+| :--: | :----- |
+| title             | The title of talk|
+| num_lang          | The number of available languages translations |
+| comments          | The number of comments |
+| duration_ted      | How long is the  video in  seconds |
+| view_ted          | The number of views |
+| categories        | The video was under which category on YouTube|
+| english           | Indicate the native language is English or not |
+
+Then, I got the cleaned data with 2165 observations and 32 variables. But I will choose only several variables to use.
 
 ### Exploratory Data Analysis
 
-## Modeling
+```{r include=FALSE}
+talks %<>% mutate(duration_min = duration_ted/60)
+talks %<>% mutate(log_views = log(view_ted))
+talks %<>% mutate(log_comments = log(comments))
+talks %<>% filter(log_comments>=0)
+talks %<>% mutate(log_numlang = log(num_lang))
+talks %<>% mutate(english = ifelse(native_lang=="en",1,0))
+talks %<>% mutate(s_duration = (duration_ted-mean(duration_ted))/sd(duration_ted))
+talks %<>% mutate(s_views = (view_ted-mean(view_ted))/sd(view_ted))
+talks %<>% mutate(s_numlang = (num_lang-mean(num_lang)/sd(num_lang)))
+talks$s_numlang <- (talks$num_lang-mean(talks$num_lang))/sd(talks$num_lang)
+talks$s_duration <- (talks$duration_ted-mean(talks$duration_ted))/sd(talks$duration_ted)
+talks %<>% mutate(log_duration = log(duration_ted))
+talks %<>% mutate(english = ifelse(native_lang=="en","English","not English"))
+```
 
-### Model fitting
 
-### Model Validation
+For `views`, `comments` and some variables all have a large range and also if we see the density plots of them, there will be a long tale. Therefore, in order to make the plot more easy to read, I take log of these variables and draw some scatter plots to see if there is correlation between some variables with comments, since my question is how some factors effect the number of comments.  
+
+```{r echo=FALSE, fig.height=4, fig.width= 10,fig.cap="Data was separate into English talks and not English talks. Different colors represent different categories.talke log of both comments and views to make it more easy to read."}
+ggplot(data = talks)+
+  aes(log(view_ted),log(comments))+
+  geom_point(aes(color = categories),alpha = 0.3)+
+  labs(title="number of visits vs number of comments",x="log(number of views)",y="log(number of comments)")+
+  geom_smooth(aes(color = categories),method = "lm",se=F)+
+  facet_grid(~english)
+```
+
+Figure 1 show the relationship between number of views and comments. But this plot indicates that the speaker of majority of videos is speaking English, so I will consider only to fit model on English talks. And in the English group, it is obviously that with different contents the slope and intercept are slightly different, but the trend is almost the same, pointing to top-right. 
+
+```{r echo=FALSE, fig.height=4, fig.width=10, fig.cap="correlation between duration and number of visits."}
+ggplot(data = talks)+
+  aes(log(duration_ted),log(comments))+
+  geom_point(alpha = 0.3,aes(color = categories))+
+  scale_fill_brewer(direction = -1)+
+  labs(title = "duration vs number of comments",x="log(duration)",y="log(number of comments)")+
+  geom_smooth(aes(color = categories),se=F,method = "lm")+
+  facet_grid(~english)
+```
+
+Figure 2 is the same situation for English and not English group as above shows. So I will focus on the English plot. It also shows that in different categories the correlation between duration and number of comments are not same. And it is more clear than Figure 1 because some categories seems to have negative correlations but others have positive correlations.
+
+```{r echo=FALSE, fig.height=4, fig.width=10, fig.cap="correlation between number of available languages and number of comments."}
+ggplot(data = talks[-931,])+
+  aes(log(num_lang),log(comments))+
+  geom_point(alpha = 0.3,aes(color = categories))+
+  labs(title = "number of available languages vs number of comments",
+       x="log(number of available language)",
+       y="log(number of comments)")+
+  geom_smooth(aes(color = categories),se=F,method = "lm")+
+  facet_grid(~english)
+```
+
+Just focus on the English group and see the regression lines on Figure 3, if the number of available language increases, the number of comments may increase. It makes sense for the more the number of available language, the more people from different countries will see the talks and leave their comments. Also different categories have different slopes and intercepts.
+
+### Model Fitting
+
+```{r include=FALSE}
+talks <- talks[-931,]
+talks <- subset(talks,english=="English")
+fit4 <- lmer(log_comments~log_duration+log_views+log_numlang+(1+log_duration|categories)+(1+log_views|categories)+(1+log_numlang|categories),talks)
+#confint(fit4)
+coef(fit4)
+summary(fit4)
+```
+
+Considering different categories, I will use multilevel model to fit the data. And for three continues variables-duration, number of language and duration-in order to match  the plots in EDA, I take log of them as predictors and also take log of number of comments as outcome. Since from EDA it is clear that talks in different categories have different correlation with variables, so I use varying slope and varying intercept in multilevel models. Besides, just as I mentioned before, English talks will only be taken into account. Below is the function:   
+
+```{r eval=FALSE}
+model <- lmer(log_comments~log_duration+log_views+log_numlang+(1+log_duration|categories)
+              +(1+log_views|categories)+(1+log_numlang|categories),talks)
+```
+
+And to see the fixed effects below, all variables are significant at alpha = 0.05 level.
+
+|                |Estimate   |Std. Error  |df        |t value |Pr(>&#124;t&#124;) |
+|:---:           |:---:      |:---:       |:---:     |:---:   |:---:              |
+|(Intercept)     |-12.93     |0.67        |16.75     |-19.43  |6.34e-13 ***       |
+|log_duration    |0.79       |0.04        |24.53     |17.57   |2.10e-15 ***       |
+|log_views       |0.33       |0.04        |12.21     |8.09    |2.99e-06 ***       |
+|log_numlang     |2.33       |0.13        |10.98     |18.56   |1.21e-09 ***       |
 
 ## Result
 
+## Model Coefficients
+
+Just take some example here, for Entertainment category, we can conclude this formula: $$log(comments)= -12.70 + 0.77*log(duration) + 0.32*log(views) + 2.15*log(numlang)$$ 
+And to make it easy to interpret:
+$$comments = e^{-12.70}\cdot e^{0.77}duration\cdot e^{0.32}views\cdot e^{2.15}numlang$$
+           $$comments= 0.0000031\cdot 2.16duration\cdot 1.37views\cdot 8.58numlang$$
+Because duration is counted in seconds, number of views always can be higher than 1000, and there are always more than 20 available languages, if we multiple them it will be a really big number, but number of comments always much less than number of views, so it makes sense that first parameter in the formula is quite small. And all the parameters of three predictors are all bigger than 1, which means they all have positive impact on number of comments. Duration increase 1 second will make the comments 2.16 times larger if other predictors are constant. And the same for number of views and number of available languages.      
+
+For different categories, the influence of each predictor is always not the same. For News & Politics, the Intercept is smaller than others($e^{-14.37}=5.74*e^{-7}$), I think it may because when things related to politics, it is serious so many people will withhold their opinion. For Science & Technology, number of language have bigger influence than other categories, it may because we always need to learn the advanced technology from other countries and language is the biggest problem. So the number of languages is much more important in talks about Science and Technology. 
+
+|                        |(Intercept) |log_duration |log_views  |log_numlang |
+|:---:                   |:---:       |:---:        |:---:      |:---:       |
+|Entertainment           |-12.70      |0.77         |0.32       |2.15        |
+|News & Politics         |-14.37      |0.90         |0.38       |2.21        |
+|People & Blogs          |-12.28      |0.73         |0.37       |2.49        |
+|Science & Technology    |-13.37      |0.82         |0.21       |2.49        |
+
+### Model Validation
+
+```{r echo=FALSE, fig.height=2.5, fig.width=6, fig.cap="Residual plot and Q-Q plot."}
+#binnedplot(fitted(fit4),resid(fit4))
+re <- plot(fit4)
+qq <- qqmath(fit4)
+grid.arrange(re,qq,nrow=1)
+```
+
+```{r echo=FALSE, fig.height=2, fig.width=4, fig.cap="Residuals vs Leverage."}
+ggplot(data.frame(lev=hatvalues(fit4),pearson=residuals(fit4,type="pearson")),
+      aes(x=lev,y=pearson)) +
+    geom_point() +
+    theme_bw()
+```
+   
+From the Residual plots in Figure 4 we can see that the mean of residuals is almost 0, but dots reduce on the right and left of the plot since the number of samples are small there, so it makes sense. And for the Q-Q plot in Figure 4, majority dots are on the lines so the normality is good. Figure 5 shows that there are not obvious leverage point.
+
 ## Discussion
+
+The estimates are all reasonable in some extents. The longer the duration, the more information the speaker conveys, so people are more likely to have some perspectives; The larger the number of views, the more people will debate and have some comments; The more the number of available languages, the more people will have access to these talks, so people all over the world will talk together. Due to features of different categories, the different estimates of three predictors are also convincing.     
+
+The result of model almost matches well for different categories in EDA, but there are still some problems. In EDA part we see that some lines have negative slopes which means that the increasing in duration will make the number of comments decrease. But because for majority of categories, duration have a positive impact on number of comments, so although I use multilevel model with varying slope to fit the data, all the estimates of duration indicate that it has positive influence on comments for all categories.  
+
+I only use three variables to predict the outcome, but there are still some variables that may have big effects on comments, such as who is the speaker, the occupation of the speaker and the contents of talks. Actually there is a column contains the information of occupation, but it seems that the occupation in that column is too specific, so for further improvement, I will clean them up, and separate them into several categories, then add them into the model.
 
 ## Citation
 
+University of Wisconsin. Mixed Models: Diagnostics and Inference. https://www.ssc.wisc.edu/sscc/pubs/MM/MM_DiagInfer.html
+
+Hadley Wickham (2017). tidyverse: Easily Install and Load the ‘Tidyverse’. R package version 1.2.1.
+https://CRAN.R-project.org/package=tidyverse
+
+Rune Haubo Bojesen Christensen. lmerTest: Tests in Linear Mixed Effects Models. R package version 3.1.3. https://CRAN.R-project.org/package=lmerTest
+    
+
+\newpage
 ## Appendix
+### More EDA
+```{r echo=FALSE, fig.cap="distribution plots for number of language, number of comments, number of views and duration"}
+p1 <- ggplot(data = talks) + 
+  aes(x=num_lang) + 
+  geom_histogram(binwidth = 2,fill="steelblue")+
+  labs(title = "distribution of available languages",x = "number of available languages")
 
-## Supplement
+p2 <- ggplot(data = talks) + 
+  aes(comments) + 
+  geom_histogram(binwidth = 100,fill="darkseagreen")+
+  xlim(0,2000)+
+  labs(title = "distribution of comments",x = "number of comments")
 
-```{r}
-talks %<>% mutate(english = ifelse(native_lang=="en",1,0))
-ggplot(data = talks)+
-  aes(log(view_ted),log(comments))+
-  geom_point(aes(color = factor(english)),alpha = 0.3)+
-  labs(title = "views vs comments")+
-  geom_smooth(aes(color = factor(english)),method = "lm",se=F)
-ggplot(data = talks)+
-  aes(log(view_ted),log(comments))+
-  geom_point(aes(color = factor(categories)),alpha = 0.3)+
-  labs(title = "views vs comments")+
-  geom_smooth(aes(color = factor(categories)),method = "lm",se=F)
+p3 <- ggplot(data = talks) + 
+  aes(view_ted) + 
+  geom_histogram(binwidth = 500000,fill="darkorange2")+
+  xlim(0,20000000)+
+  labs(title = "distribution of views",x = "number of views")
 
-ggplot(data = talks)+
-  aes(log(duration_ted),log(comments))+
-  geom_point(alpha = 0.3,aes(color = factor(english)))+
-  scale_fill_brewer(direction = -1)+
-  labs(title = "comments vs duration")+
-  geom_smooth(aes(color = factor(english)))
-ggplot(data = talks)+
-  aes(log(duration_ted),log(comments))+
-  geom_point(alpha = 0.3,aes(color = factor(categories)))+
-  scale_fill_brewer(direction = -1)+
-  labs(title = "comments vs duration")+
-  geom_smooth(aes(color = factor(categories)),se=F,method = "lm")
-
-ggplot(data = talks[-931,])+
-  aes(log(num_lang),log(comments))+
-  geom_point(alpha = 0.3,aes(color = factor(english)))+
-  labs(title = "comments vs number of available languages")+
-  geom_smooth(aes(color = factor(english)),method="lm",se=F)
-ggplot(data = talks[-931,])+
-  aes(log(num_lang),log(comments))+
-  geom_point(alpha = 0.3,aes(color = factor(categories)))+
-  labs(title = "comments vs number of available languages")+
-  geom_smooth(aes(color = factor(categories)),se=F,method = "lm")
+p4 <- ggplot(data = talks) + 
+  aes(duration_ted/60) + 
+  geom_histogram(binwidth = 1,fill="hotpink3")+
+  labs(title = "distribution of duration",x = "duration/min")
+grid.arrange(p1,p2,p3,p4,nrow=2)
 ```
+
+```{r echo=FALSE, fig.cap="plots for count of category"}
+##category
+talks %>%
+  count(categories, sort = TRUE) %>%
+  mutate(event = reorder(categories, n)) %>%
+  ggplot(aes(n, categories)) +
+  geom_col(fill="tan4") +
+  labs(y = NULL)
+```
+
+\newpage
+### Full Results
+Random effects of model
+```{r echo=FALSE}
+ranef(fit4)
+```
+Fixed effects of model
+```{r echo=FALSE}
+fixef(fit4)
+```
+Coefficients of model
+```{r echo=FALSE}
+coef(fit4)
+```
+
 

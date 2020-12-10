@@ -24,7 +24,7 @@ ggplot(data = talks) +
 
 ##
 ggplot(data = talks) + 
-  aes(x=num_lang,y=..density..) + 
+  aes(x=num_lang) + 
   geom_histogram(binwidth = 2,fill="steelblue")+
   labs(title = "distribution of available languages",x = "number of available languages")
 
@@ -234,12 +234,16 @@ outlierTest(fit3)
 library("lme4")
 library(arm)
 
-fit4 <- lmer(log_comments~log_duration+log_views+log(num_lang)+(1|categories)+english:log(num_lang)+english+english:log(view_ted),talks[-931,])
+fit4 <- lmer(log_comments~log_duration+log_views+log(num_lang)+(1|categories),talks[-931,])
 summary(fit4)
 plot(fit4,which=2)
-qqPlot(fit4)
+qqPlot(fit8)
 
+fit8 <- lmer(log_comments~log_duration+log_views+log(num_lang)+(1|categories),talks[-931,])
+qqmath(fit4)
 confint(fit4)
+
+plot(confint(fit4))
 ranef(fit4)
 coef(fit4)
 
