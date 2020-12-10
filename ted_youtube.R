@@ -131,47 +131,6 @@ ggplot(data = talks[-931,])+
   labs(title = "comments vs number of available languages")+
   geom_smooth(aes(color = factor(categories)),se=F,method = "lm")
 
-
-
-ggplot(data = talks)+
-  aes(dislike_count,average_rating)+
-  geom_point(alpha = 0.3,color = "brown4")+
-  labs(title = "average rating vs number of dislike")+
-  xlim(0,2500)+
-  geom_smooth()
-
-ggplot(data = talks)+
-  aes(like_count,average_rating)+
-  geom_point(alpha = 0.3,color = "brown4")+
-  labs(title = "average rating vs number of like")+
-  xlim(0,15000)+
-  geom_smooth()
-  
-ggplot(data = talks)+geom_boxplot(aes(like_count))
-
-ggplot(data = talks)+
-  aes(duration_yt,average_rating)+
-  geom_point(alpha = 0.3,color = "brown4")+
-  labs(title = "average rating vs duration")+
-  xlim(0,2000)+
-  geom_smooth()
-
-ggplot(data = talks)+
-  aes(log(view_yt),average_rating)+
-  geom_point(alpha = 0.3,color = "brown4")+
-  labs(title = "average rating vs number of views")+
-  geom_smooth()
-
-ggplot(data = talks)+
-  aes(view_yt,average_rating)+
-  geom_point(alpha = 0.3,color = "brown4")+
-  labs(title = "average rating vs number of views")+
-  geom_smooth()
-
-ggplot(data = talks)+
-  aes(dislike_count,like_count)+
-  geom_point(alpha = 0.3,color = "brown4")
-
 #text mining
 topics <- data.frame(talks_id = ted_talks_en$talk_id, text = ted_talks_en$topics)
 topics %<>% unnest_tokens(word, text) %>% anti_join(stop_words)
