@@ -153,19 +153,16 @@ And to see the fixed effects below, all variables are significant at alpha = 0.0
 
 ## Model Coefficients
 
-Just take some example here, for Entertainment category, we can conclude this formula: $$log(comments)= -12.70 + 0.77*log(duration) + 0.32*log(views) + 2.15*log(numlang)$$ 
-And to make it easy to interpret:
-$$comments = e^{-12.70}\cdot e^{0.77}duration\cdot e^{0.32}views\cdot e^{2.15}numlang$$
-           $$comments= 0.0000031\cdot 2.16duration\cdot 1.37views\cdot 8.58numlang$$
-Because duration is counted in seconds, number of views always can be higher than 1000, and there are always more than 20 available languages, if we multiple them it will be a really big number, but number of comments always much less than number of views, so it makes sense that first parameter in the formula is quite small. And all the parameters of three predictors are all bigger than 1, which means they all have positive impact on number of comments. Duration increase 1 second will make the comments 2.16 times larger if other predictors are constant. And the same for number of views and number of available languages.      
+Just take some example here, for Entertainment category, we can conclude this formula: $$log(comments)= -12.70 + 0.77\cdot log(duration) + 0.32\cdot log(views) + 2.15\cdot log(numlang)$$
+Because duration is counted in seconds, number of views always can be higher than 1000, and there are always more than 20 available languages, but number of comments always much less than number of views, so it makes sense that intercept in the formula is negative. But for log(duration), log(views) and log(numlang) can not be 0, it is hard to interpret. And all the parameters of three predictors are all bigger than 0, which means they all have positive impact on number of comments. For each 1% difference in duration, the predicted difference in comments is 0.77%. And the same for number of views and number of available languages.      
 
-For different categories, the influence of each predictor is always not the same. For News & Politics, the Intercept is smaller than others($e^{-14.37}=5.74*e^{-7}$), I think it may because when things related to politics, it is serious so many people will withhold their opinion. For Science & Technology, number of language have bigger influence than other categories, it may because we always need to learn the advanced technology from other countries and language is the biggest problem. So the number of languages is much more important in talks about Science and Technology. 
+For different categories, the influence of each predictor is always not the same. For News & Politics, the Intercept is smaller than others, I think it may because when things related to politics, it is serious so many people will withhold their opinion. For Science & Technology, number of language have bigger influence than other categories, it may because we always need to learn the advanced technology from other countries and language is the biggest problem. So the number of languages is much more important in talks about Science and Technology. 
 
 |                        |(Intercept) |log_duration |log_views  |log_numlang |
 |:---:                   |:---:       |:---:        |:---:      |:---:       |
 |Entertainment           |-12.70      |0.77         |0.32       |2.15        |
 |News & Politics         |-14.37      |0.90         |0.38       |2.21        |
-|People & Blogs          |-12.28      |0.73         |0.37       |2.49        |
+|People & Blogs          |-12.28      |0.73         |0.37       |2.47        |
 |Science & Technology    |-13.37      |0.82         |0.21       |2.49        |
 
 ### Model Validation
